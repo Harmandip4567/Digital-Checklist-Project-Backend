@@ -47,7 +47,7 @@ class ChecklistItemOut(BaseModel):
     label: str
     input_type: str
     required: bool
-    frequency: Optional[str]
+    frequency: Optional[str]   # later i will change this name "frequency" to "value"
     unit: Optional[str]
     options: Optional[List[str]]
 
@@ -60,7 +60,6 @@ class ChecklistTemplateOut(BaseModel):
     description: Optional[str]
     created_by: Optional[int]
     created_at: Optional[datetime]
-    items: List[ChecklistItemOut] = []  # Means Iteams should be list and where each element is of type ChecklistItemOut
-
+    items: List[ChecklistItemOut] = []  # normaly the the data object comes from frontend automatically converts to python List and goes to backend directly as  Here the combination of both the template and items data comes in the form of list so here we  put the template data directly and the items data is goes through the
     class Config:
         from_attributes = True
