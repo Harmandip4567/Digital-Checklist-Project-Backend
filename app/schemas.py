@@ -63,3 +63,21 @@ class ChecklistTemplateOut(BaseModel):
     items: List[ChecklistItemOut] = []  # normaly the the data object comes from frontend automatically converts to python List and goes to backend directly as  Here the combination of both the template and items data comes in the form of list so here we  put the template data directly and the items data is goes through the
     class Config:
         from_attributes = True
+
+# schemas for editing both the template and items
+
+class TemplateItemUpdate(BaseModel):
+    id: Optional[int]   # may be None for new items
+    label: str
+    input_type: str
+    required: bool
+    frequency: Optional[str] = None
+    unit: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class TemplateUpdate(BaseModel):
+    title: str
+    description: Optional[str] = None
+    items: List[TemplateItemUpdate]

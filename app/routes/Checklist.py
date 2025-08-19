@@ -1,27 +1,37 @@
-from fastapi import Depends
-from app.dependencies import get_current_user  # adjust import to your code
-from app import models, schemas
-from sqlalchemy.orm import Session
-from app.database import get_db
-from fastapi import APIRouter
-router = APIRouter(prefix="/checklist", tags=["Checklist"])
 from typing import List
-from fastapi import HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from app import models, schemas
+from app.database import get_db
+from app.dependencies import get_current_user
+
+router = APIRouter(
+    prefix="/checklist",
+    tags=["Checklist"],
+)
+
+
+# -----------------------------
+# Create Checklist Template
+# -----------------------------
 @router.post("/templates", response_model=schemas.ChecklistTemplateOut)
 def create_template(
     payload: schemas.ChecklistTemplateCreate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)  # ✅ Require logged in user
+    current_user: models.User = Depends(get_current_user),  # ✅ Require logged-in user
 ):
+    # Create template
     tpl = models.ChecklistTemplate(
         title=payload.title,
         description=payload.description,
-        created_by=current_user.id  # Use user ID as it's an Integer foreign key
+        created_by=current_user.id,  # Use user ID (FK)
     )
     db.add(tpl)
     db.commit()
     db.refresh(tpl)
 
+    # Add steps (items)
     for step in payload.steps:
         item = models.ChecklistItem(
             template_id=tpl.id,
@@ -31,40 +41,118 @@ def create_template(
             required=bool(step.required),
             frequency=step.frequency,
             unit=step.unit,
-            options=step.options if step.options else None
+            options=step.options if step.options else None,
         )
         db.add(item)
+
     db.commit()
     db.refresh(tpl)
     return tpl
 
 
-
-# for showing the existing templates
-
-
+# -----------------------------
+# Get all Templates
+# -----------------------------
 @router.get("/templates", response_model=List[schemas.ChecklistTemplateOut])
-def get_templates(db: Session = Depends(get_db),current_user=Depends(get_current_user)):
+def get_templates(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
     templates = db.query(models.ChecklistTemplate).all()
     return templates
 
-# for showing the  items of the clicked template
-# the reason why this is not working earlier as when we use .first() it return a single row which is a object but we use respose model as list of objects so we need to use .all() to get all the rows as a list of objects
+
+# -----------------------------
+# Get Items of a Template
+# -----------------------------
 @router.get("/templates/{template_id}", response_model=List[schemas.ChecklistItemOut])
-def get_template_items(template_id: int, db: Session = Depends(get_db),currentUser=Depends(get_current_user)):
-    items =db.query(models.ChecklistItem).filter(models.ChecklistItem.template_id == template_id).all()
+def get_template_items(
+    template_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    items = (
+        db.query(models.ChecklistItem)
+        .filter(models.ChecklistItem.template_id == template_id)
+        .all()
+    )
     return items
 
-# for getting both the detils of template and items in frontend page ie TemplateItems.jsx
+
+# -----------------------------
+# Get Template with Items
+# -----------------------------
 @router.get("/template_with_items/{template_id}")
-def get_template_with_items(template_id: int, db: Session = Depends(get_db),currentUser=Depends(get_current_user)):
+def get_template_with_items(
+    template_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    template = (
+        db.query(models.ChecklistTemplate)
+        .filter(models.ChecklistTemplate.id == template_id)
+        .first()
+    )
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    items = (
+        db.query(models.ChecklistItem)
+        .filter(models.ChecklistItem.template_id == template_id)
+        .all()
+    )
+
+    return {"template": template, "items": items}
+
+
+@router.put("/template/{template_id}", response_model=schemas.ChecklistTemplateOut)
+def update_template(template_id: int, data: schemas.TemplateUpdate, db: Session = Depends(get_db)):
+    print("Updating template:", template_id, "with data:", data)
+
+    # Fetch template
     template = db.query(models.ChecklistTemplate).filter(models.ChecklistTemplate.id == template_id).first()
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
 
-    items = db.query(models.ChecklistItem).filter(models.ChecklistItem.template_id == template_id).all()
+    # Update template fields
+    template.title = data.title
+    template.description = data.description
 
-    return {
-        "template": template,
-        "items": items
-    }
+    # Map existing items by ID
+    existing_items = {item.id: item for item in template.items}
+
+    for item_data in data.items:
+        if item_data.id and item_data.id in existing_items:
+            # Update existing item
+            item = existing_items[item_data.id]
+            item.label = item_data.label
+            item.input_type = item_data.input_type
+            item.required = item_data.required
+            item.frequency = item_data.frequency
+            item.unit = item_data.unit
+            del existing_items[item_data.id]  # Mark as processed
+        
+
+    # Delete items not included in update request
+    # for item in existing_items.values():
+    #     db.delete(item)
+
+    db.commit()
+    db.refresh(template)
+    return template
+
+
+
+
+# we will use this later for  add the new items in checklistitems
+            # # Add new item
+            # new_item = models.ChecklistItem(
+                  
+            #     label=item_data.label,
+            #     input_type=item_data.input_type,
+            #     required=item_data.required,
+            #     frequency=item_data.frequency,
+            #     unit=item_data.unit,
+            #     template_id=template.id,
+            # )
+            # db.add(new_item)
