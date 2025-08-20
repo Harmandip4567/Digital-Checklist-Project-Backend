@@ -27,3 +27,5 @@ def delete_template(template_id: int, db: Session = Depends(get_db),currentUser=
     db.delete(template)
     db.commit()
     return {"message": "Template deleted successfully"}
+
+

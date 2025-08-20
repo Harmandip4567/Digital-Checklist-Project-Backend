@@ -27,7 +27,7 @@ class Token(BaseModel):
     role: str
 
 class ChecklistItemCreate(BaseModel):
-    order: int
+    # order: int                  # this value is automatically getting from table so user does not need to provide this value 
     label: str
     input_type: str
     required: bool = False

@@ -24,7 +24,7 @@ class ChecklistTemplate(Base):
 class ChecklistItem(Base):
     __tablename__ = "checklist_items"
     id = Column(Integer, primary_key=True, index=True)
-    template_id = Column(Integer, ForeignKey("checklist_templates.id", ondelete="CASCADE"), index=True)
+    template_id = Column(Integer, ForeignKey("checklist_templates.id", ondelete="CASCADE"))
     order = Column(Integer, default=1)
     label = Column(String, nullable=False) # task
     input_type = Column(String, nullable=False)   # "text","number","checkbox","select","date","file"

@@ -156,3 +156,31 @@ def update_template(template_id: int, data: schemas.TemplateUpdate, db: Session 
             #     template_id=template.id,
             # )
             # db.add(new_item)
+
+
+
+# Add a new Item to a existing Template
+@router.post("/template/{template_id}/items", response_model=schemas.ChecklistItemOut)
+def add_template_item(
+    template_id: int,
+    item_data: schemas.ChecklistItemCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    template = db.query(models.ChecklistTemplate).filter(models.ChecklistTemplate.id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    new_item = models.ChecklistItem(
+        template_id=template.id,
+        label=item_data.label,
+        input_type=item_data.input_type,
+        required=item_data.required,
+        frequency=item_data.frequency,
+        unit=item_data.unit
+        
+    )
+    db.add(new_item)
+    db.commit()
+    db.refresh(new_item)
+    return new_item
