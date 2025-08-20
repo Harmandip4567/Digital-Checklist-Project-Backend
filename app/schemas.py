@@ -61,6 +61,7 @@ class ChecklistTemplateOut(BaseModel):
     created_by: Optional[int]
     created_at: Optional[datetime]
     items: List[ChecklistItemOut] = []  # normaly the the data object comes from frontend automatically converts to python List and goes to backend directly as  Here the combination of both the template and items data comes in the form of list so here we  put the template data directly and the items data is goes through the
+    status: Optional[str] = None
     class Config:
         from_attributes = True
 

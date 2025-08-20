@@ -1,3 +1,4 @@
+from fastapi import Body
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -115,8 +116,8 @@ def update_template(template_id: int, data: schemas.TemplateUpdate, db: Session 
         raise HTTPException(status_code=404, detail="Template not found")
 
     # Update template fields
-    template.title = data.title
-    template.description = data.description
+    template.title = data.title # type: ignore
+    template.description = data.description # type: ignore
 
     # Map existing items by ID
     existing_items = {item.id: item for item in template.items}
@@ -140,6 +141,17 @@ def update_template(template_id: int, data: schemas.TemplateUpdate, db: Session 
     db.commit()
     db.refresh(template)
     return template
+
+# Update checklist status
+@router.put("/templates/{template_id}/status")
+def update_checklist_status(template_id: int, status: str = Body(..., embed=True), db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    template = db.query(models.ChecklistTemplate).filter(models.ChecklistTemplate.id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Checklist not found")
+    template.status = status # type: ignore
+    db.commit()
+    db.refresh(template)
+    return {"id": template.id, "status": template.status}
 
 
 
