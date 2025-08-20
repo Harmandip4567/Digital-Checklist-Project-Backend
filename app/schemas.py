@@ -27,7 +27,7 @@ class Token(BaseModel):
     role: str
 
 class ChecklistItemCreate(BaseModel):
-    # order: int                  # this value is automatically getting from table so user does not need to provide this value 
+    order: int                  # this value is automatically getting from table so user does not need to provide this value 
     label: str
     input_type: str
     required: bool = False
@@ -82,3 +82,11 @@ class TemplateUpdate(BaseModel):
     title: str
     description: Optional[str] = None
     items: List[TemplateItemUpdate]
+
+class AddNewChecklistItem(BaseModel):
+    label: str
+    input_type: str
+    required: bool = False
+    frequency: Optional[str] = None
+    unit: Optional[str] = None
+    options: Optional[List[str]] = None

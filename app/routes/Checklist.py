@@ -175,7 +175,7 @@ def update_checklist_status(template_id: int, status: str = Body(..., embed=True
 @router.post("/template/{template_id}/items", response_model=schemas.ChecklistItemOut)
 def add_template_item(
     template_id: int,
-    item_data: schemas.ChecklistItemCreate,
+    item_data: schemas.AddNewChecklistItem,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
