@@ -36,7 +36,7 @@ def create_template(
     for step in payload.steps:
         item = models.ChecklistItem(
             template_id=tpl.id,
-            order=step.order,
+            order=step.order, # type: ignore
             label=step.label,
             input_type=step.input_type,
             required=bool(step.required),
@@ -107,7 +107,9 @@ def get_template_with_items(
 
 
 @router.put("/template/{template_id}", response_model=schemas.ChecklistTemplateOut)
-def update_template(template_id: int, data: schemas.TemplateUpdate, db: Session = Depends(get_db)):
+def update_template(template_id: int, data: schemas.TemplateUpdate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can edit templates")
     print("Updating template:", template_id, "with data:", data)
 
     # Fetch template
@@ -142,16 +144,16 @@ def update_template(template_id: int, data: schemas.TemplateUpdate, db: Session 
     db.refresh(template)
     return template
 
-# Update checklist status
-@router.put("/templates/{template_id}/status")
-def update_checklist_status(template_id: int, status: str = Body(..., embed=True), db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    template = db.query(models.ChecklistTemplate).filter(models.ChecklistTemplate.id == template_id).first()
-    if not template:
-        raise HTTPException(status_code=404, detail="Checklist not found")
-    template.status = status # type: ignore
-    db.commit()
-    db.refresh(template)
-    return {"id": template.id, "status": template.status}
+# # Update checklist status
+# @router.put("/templates/{template_id}/status")
+# def update_checklist_status(template_id: int, status: str = Body(..., embed=True), db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+#     template = db.query(models.ChecklistTemplate).filter(models.ChecklistTemplate.id == template_id).first()
+#     if not template:
+#         raise HTTPException(status_code=404, detail="Checklist not found")
+#     template.status = status # type: ignore
+#     db.commit()
+#     db.refresh(template)
+#     return {"id": template.id, "status": template.status}
 
 
 
@@ -179,6 +181,8 @@ def add_template_item(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
+    if current_user.role != "admin": # type: ignore
+        raise HTTPException(status_code=403, detail="Only admin can add items")
     template = db.query(models.ChecklistTemplate).filter(models.ChecklistTemplate.id == template_id).first()
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
@@ -196,3 +200,36 @@ def add_template_item(
     db.commit()
     db.refresh(new_item)
     return new_item
+
+# Get Checklist Template Details (with items and status)
+@router.get("/details/{template_id}", response_model=schemas.ChecklistTemplateOut)
+def get_checklist_details(
+    template_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    template = (
+        db.query(models.ChecklistTemplate)
+        .filter(models.ChecklistTemplate.id == template_id)
+        .first()
+    )
+    if not template:
+        raise HTTPException(status_code=404, detail="Checklist not found")
+    # Items are loaded via relationship
+    return template
+
+# Update Checklist Status (Pending/Completed)
+@router.put("/details/{template_id}/status", response_model=schemas.ChecklistTemplateOut)
+def update_checklist_status(
+    template_id: int,
+    status: str = Body(..., embed=True),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    template = db.query(models.ChecklistTemplate).filter(models.ChecklistTemplate.id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Checklist not found")
+    template.status = status # type: ignore
+    db.commit()
+    db.refresh(template)
+    return template
