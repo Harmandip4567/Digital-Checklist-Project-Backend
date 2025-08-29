@@ -19,6 +19,8 @@ class ChecklistTemplate(Base):
     created_by = Column(Integer,ForeignKey("users.id",ondelete="CASCADE")) 
     created_at = Column(DateTime, default=datetime.utcnow)
     status = Column(String, default="pending")
+    delay_reason = Column(Text, nullable=True)
+    notes = Column(Text, nullable=True) 
 
     items = relationship("ChecklistItem", back_populates="template", cascade="all, delete-orphan")
 

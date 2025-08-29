@@ -1,4 +1,4 @@
-from fastapi import Body
+from fastapi import Body, Request
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -220,16 +220,25 @@ def get_checklist_details(
 
 # Update Checklist Status (Pending/Completed)
 @router.put("/details/{template_id}/status", response_model=schemas.ChecklistTemplateOut)
-def update_checklist_status(
+async def update_checklist_status(
     template_id: int,
-    status: str = Body(..., embed=True),
+    request: Request, # type: ignore
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
+    data = await request.json()
+    status = data.get("status")
+    delay_reason = data.get("delay_reason")
+    notes = data.get("notes")
     template = db.query(models.ChecklistTemplate).filter(models.ChecklistTemplate.id == template_id).first()
     if not template:
         raise HTTPException(status_code=404, detail="Checklist not found")
-    template.status = status # type: ignore
+    if status:
+        template.status = status
+    if delay_reason is not None:
+        template.delay_reason = delay_reason
+    if notes is not None:
+        template.notes = notes
     db.commit()
     db.refresh(template)
     return template
