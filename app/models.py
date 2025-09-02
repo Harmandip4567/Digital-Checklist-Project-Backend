@@ -20,7 +20,8 @@ class ChecklistTemplate(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     status = Column(String, default="pending")
     delay_reason = Column(Text, nullable=True)
-    notes = Column(Text, nullable=True) 
+    notes = Column(Text, nullable=True)
+    file_path = Column(String, nullable=True) 
 
     items = relationship("ChecklistItem", back_populates="template", cascade="all, delete-orphan")
 

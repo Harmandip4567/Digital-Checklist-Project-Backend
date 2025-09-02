@@ -1,8 +1,9 @@
 from fastapi import Body, Request
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi import UploadFile, File, Form
 from sqlalchemy.orm import Session
-
+import os
 from app import models, schemas
 from app.database import get_db
 from app.dependencies import get_current_user
@@ -222,23 +223,29 @@ def get_checklist_details(
 @router.put("/details/{template_id}/status", response_model=schemas.ChecklistTemplateOut)
 async def update_checklist_status(
     template_id: int,
-    request: Request, # type: ignore
+    status: str = Form(...),
+    delay_reason: str = Form(None),
+    notes: str = Form(None),
+    file: UploadFile = File(None),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    data = await request.json()
-    status = data.get("status")
-    delay_reason = data.get("delay_reason")
-    notes = data.get("notes")
     template = db.query(models.ChecklistTemplate).filter(models.ChecklistTemplate.id == template_id).first()
     if not template:
         raise HTTPException(status_code=404, detail="Checklist not found")
     if status:
-        template.status = status
+        template.status = status # type: ignore
     if delay_reason is not None:
-        template.delay_reason = delay_reason
+        template.delay_reason = delay_reason # type: ignore
     if notes is not None:
-        template.notes = notes
+        template.notes = notes # type: ignore
+    if file is not None:
+        upload_dir = "uploads"
+        os.makedirs(upload_dir, exist_ok=True)  # Ensure folder exists
+        file_location = f"{upload_dir}/{template_id}_{file.filename}"
+        with open(file_location, "wb") as f:
+            f.write(await file.read())
+        template.file_path = file_location # type: ignore
     db.commit()
     db.refresh(template)
     return template
