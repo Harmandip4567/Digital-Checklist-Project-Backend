@@ -22,6 +22,7 @@ class ChecklistTemplate(Base):
     delay_reason = Column(Text, nullable=True)
     notes = Column(Text, nullable=True)
     file_path = Column(String, nullable=True) 
+    item_responses = Column(Text, nullable=True)
 
     items = relationship("ChecklistItem", back_populates="template", cascade="all, delete-orphan")
 

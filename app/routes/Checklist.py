@@ -3,7 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi import UploadFile, File, Form
 from sqlalchemy.orm import Session
-import os
+import os, json
 from app import models, schemas
 from app.database import get_db
 from app.dependencies import get_current_user
@@ -228,6 +228,7 @@ async def update_checklist_status(
     notes: str = Form(None),
     file: UploadFile = File(None),
     db: Session = Depends(get_db),
+    item_responses: str = Form(None),
     current_user: models.User = Depends(get_current_user),
 ):
     template = db.query(models.ChecklistTemplate).filter(models.ChecklistTemplate.id == template_id).first()
@@ -246,6 +247,8 @@ async def update_checklist_status(
         with open(file_location, "wb") as f:
             f.write(await file.read())
         template.file_path = file_location # type: ignore
+    if item_responses is not None:
+        template.item_responses = item_responses # type: ignore
     db.commit()
     db.refresh(template)
     return template

@@ -65,6 +65,7 @@ class ChecklistTemplateOut(BaseModel):
     delay_reason: Optional[str] = None
     notes: Optional[str] = None
     file_path: Optional[str] = None
+    item_responses: Optional[str] = None
     class Config:
         from_attributes = True
 
