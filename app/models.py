@@ -18,15 +18,24 @@ class ChecklistTemplate(Base):
     description = Column(Text)
     created_by = Column(Integer,ForeignKey("users.id",ondelete="CASCADE")) 
     created_at = Column(DateTime, default=datetime.utcnow)
+<<<<<<< Updated upstream
     status = Column(String, default="pending")
 
+=======
+    # Used for maintainer side only
+    status = Column(String, default="pending")
+    delay_reason = Column(Text, nullable=True)
+    notes = Column(Text, nullable=True)
+    file_path = Column(String, nullable=True) 
+    item_responses = Column(Text, nullable=True)
+>>>>>>> Stashed changes
     items = relationship("ChecklistItem", back_populates="template", cascade="all, delete-orphan")
 
 class ChecklistItem(Base):
     __tablename__ = "checklist_items"
     id = Column(Integer, primary_key=True, index=True)
     template_id = Column(Integer, ForeignKey("checklist_templates.id", ondelete="CASCADE"))
-    order = Column(Integer, default=1)
+    order = Column(Integer, default=-1)
     label = Column(String, nullable=False) # task
     input_type = Column(String, nullable=False)   # "text","number","checkbox","select","date","file"
     required = Column(Boolean, default=False)

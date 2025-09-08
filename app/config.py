@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql://postgres:091003@localhost:5432/DigitalCheckList"
     SECRET_KEY: str = "yoursecretkey"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
     class Config:
         env_file = ".env"

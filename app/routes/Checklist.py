@@ -6,7 +6,11 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from app.database import get_db
 from app.dependencies import get_current_user
+import logging
+import os
+from fastapi import Form, UploadFile, File
 
+logger = logging.getLogger(__name__)
 router = APIRouter(
     prefix="/checklist",
     tags=["Checklist"],
@@ -81,7 +85,7 @@ def get_template_items(
 
 
 # -----------------------------
-# Get Template with Items
+# Get Template and its Items both
 # -----------------------------
 @router.get("/template_with_items/{template_id}")
 def get_template_with_items(
@@ -132,11 +136,6 @@ def update_template(template_id: int, data: schemas.TemplateUpdate, db: Session 
             item.frequency = item_data.frequency
             item.unit = item_data.unit
             del existing_items[item_data.id]  # Mark as processed
-        
-
-    # Delete items not included in update request
-    # for item in existing_items.values():
-    #     db.delete(item)
 
     db.commit()
     db.refresh(template)
@@ -175,16 +174,23 @@ def update_checklist_status(template_id: int, status: str = Body(..., embed=True
 @router.post("/template/{template_id}/items", response_model=schemas.ChecklistItemOut)
 def add_template_item(
     template_id: int,
+<<<<<<< Updated upstream
     item_data: schemas.AddNewChecklistItem,
+=======
+    item_data: schemas.AddChecklistItem,
+>>>>>>> Stashed changes
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
+    logger.info(f"Received order: {item_data.order}")
+
     template = db.query(models.ChecklistTemplate).filter(models.ChecklistTemplate.id == template_id).first()
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
 
     new_item = models.ChecklistItem(
         template_id=template.id,
+        order=item_data.order,
         label=item_data.label,
         input_type=item_data.input_type,
         required=item_data.required,
@@ -196,3 +202,89 @@ def add_template_item(
     db.commit()
     db.refresh(new_item)
     return new_item
+
+
+# for deletion of a template
+@router.delete("/template/{Template_id}")
+def delete_template(Template_id:int,db=Depends(get_db),current_user= Depends(get_current_user)):
+    templateToDelete=db.query(models.ChecklistTemplate).filter(models.ChecklistTemplate.id==Template_id).first()
+    if not templateToDelete:
+        raise HTTPException(status_code =404 ,detail="Template to Delete not found")
+    db.delete(templateToDelete)
+    db.commit()
+    
+    return {"message":"template is deleted successfully"}
+    
+# for deletion of a item
+@router.delete("/template/item/{itemId}")
+def delete_template_item(itemId:int , db:Session =Depends(get_db),current_User= Depends(get_current_user)):
+    itemToDelete = db.query(models.ChecklistItem).filter(models.ChecklistItem.id==itemId).first() 
+    if not itemToDelete:
+        raise HTTPException(status_code =404 ,detail="item to Delete not found") 
+    db.delete(itemToDelete)
+    db.commit()
+    return {"message":"Item is deleted successfully"}
+
+
+#------------------------------------------------------------------------
+# For Maintianer Use
+# Get Checklist Template Details (with items and status)
+@router.get("/details/{template_id}", response_model=schemas.ChecklistTemplateOut)
+def get_checklist_details(
+    template_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    template = (
+        db.query(models.ChecklistTemplate)
+        .filter(models.ChecklistTemplate.id == template_id)
+        .first()
+    )
+    if not template:
+        raise HTTPException(status_code=404, detail="Checklist not found")
+    # Items are loaded via relationship
+    return template
+
+# Update Checklist Status (Pending/Completed)
+@router.put("/details/{template_id}/status", response_model=schemas.ChecklistTemplateOut)
+async def update_checklist_status(
+    template_id: int,
+    status: str = Form(...),
+    delay_reason: str = Form(None),
+    notes: str = Form(None),
+    file: UploadFile = File(None),
+    db: Session = Depends(get_db),
+    item_responses: str = Form(None),
+    current_user: models.User = Depends(get_current_user),
+):
+    template = db.query(models.ChecklistTemplate).filter(models.ChecklistTemplate.id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Checklist not found")
+    if status:
+        template.status = status # type: ignore
+    if delay_reason is not None:
+        template.delay_reason = delay_reason # type: ignore
+    if notes is not None:
+        template.notes = notes # type: ignore
+    if file is not None:
+        upload_dir = "uploads"
+        os.makedirs(upload_dir, exist_ok=True)  # Ensure folder exists
+        file_location = f"{upload_dir}/{template_id}_{file.filename}"
+        with open(file_location, "wb") as f:
+            f.write(await file.read())
+        template.file_path = file_location # type: ignore
+    if item_responses is not None:
+        template.item_responses = item_responses # type: ignore
+    db.commit()
+    db.refresh(template)
+    return template
+
+
+# Getting all the checklists used by maintainer  (ie whose status is completed)
+
+@router.get("/usedByMaintainer", response_model=List[schemas.ChecklistTemplateOut])
+def get_used_checklists(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    return db.query(models.ChecklistTemplate).filter(models.ChecklistTemplate.status != "pending").all()

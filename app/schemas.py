@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr ,Field
 from typing import List, Optional
 from datetime import datetime
 class UserCreate(BaseModel):
@@ -60,8 +60,18 @@ class ChecklistTemplateOut(BaseModel):
     description: Optional[str]
     created_by: Optional[int]
     created_at: Optional[datetime]
+<<<<<<< Updated upstream
     items: List[ChecklistItemOut] = []  # normaly the the data object comes from frontend automatically converts to python List and goes to backend directly as  Here the combination of both the template and items data comes in the form of list so here we  put the template data directly and the items data is goes through the
     status: Optional[str] = None
+=======
+    items: List[ChecklistItemOut] = Field(default_factory=list) # normaly the the data object comes from frontend automatically converts to python List and goes to backend directly as  Here the combination of both the template and items data comes in the form of list so here we  put the template data directly and the items data is goes through the
+    # for maintainer only   
+    status: Optional[str] = None
+    delay_reason: Optional[str] = None
+    notes: Optional[str] = None
+    file_path: Optional[str] = None   
+    item_responses: Optional[str] = None
+>>>>>>> Stashed changes
     class Config:
         from_attributes = True
 
@@ -83,10 +93,21 @@ class TemplateUpdate(BaseModel):
     description: Optional[str] = None
     items: List[TemplateItemUpdate]
 
+<<<<<<< Updated upstream
 class AddNewChecklistItem(BaseModel):
+=======
+
+class AddChecklistItem(BaseModel):
+    order: int
+>>>>>>> Stashed changes
     label: str
     input_type: str
     required: bool = False
     frequency: Optional[str] = None
     unit: Optional[str] = None
+<<<<<<< Updated upstream
     options: Optional[List[str]] = None
+=======
+    options: Optional[List[str]] = None
+
+>>>>>>> Stashed changes
