@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, JSON
 from app.database import Base
 from datetime import datetime
 from sqlalchemy.orm import relationship
+
 class User(Base):
     __tablename__ = "users"
 
@@ -16,19 +17,15 @@ class ChecklistTemplate(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
     description = Column(Text)
-    created_by = Column(Integer,ForeignKey("users.id",ondelete="CASCADE")) 
+    created_by = Column(Integer, ForeignKey("users.id", ondelete="CASCADE")) 
     created_at = Column(DateTime, default=datetime.utcnow)
-<<<<<<< Updated upstream
-    status = Column(String, default="pending")
-
-=======
-    # Used for maintainer side only
+    # Used for maintainer side
     status = Column(String, default="pending")
     delay_reason = Column(Text, nullable=True)
     notes = Column(Text, nullable=True)
     file_path = Column(String, nullable=True) 
     item_responses = Column(Text, nullable=True)
->>>>>>> Stashed changes
+
     items = relationship("ChecklistItem", back_populates="template", cascade="all, delete-orphan")
 
 class ChecklistItem(Base):
