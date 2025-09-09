@@ -1,4 +1,5 @@
-from fastapi import Body
+from fastapi import Body, Form, UploadFile, File
+
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -9,7 +10,6 @@ from app.dependencies import get_current_user
 import logging
 import os
 from fastapi import Form, UploadFile, File
-
 logger = logging.getLogger(__name__)
 router = APIRouter(
     prefix="/checklist",
@@ -21,32 +21,46 @@ router = APIRouter(
 # Create Checklist Template
 # -----------------------------
 @router.post("/templates", response_model=schemas.ChecklistTemplateOut)
-def create_template(
+async def create_template(
     payload: schemas.ChecklistTemplateCreate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),  # ✅ Require logged-in user
+    current_user: models.User = Depends(get_current_user),
 ):
-    # Create template
-    tpl = models.ChecklistTemplate(
-        title=payload.title,
-        description=payload.description,
-        created_by=current_user.id,  # Use user ID (FK)
-    )
-    db.add(tpl)
-    db.commit()
-    db.refresh(tpl)
+    try:
+        # Create template
+        tpl = models.ChecklistTemplate(
+            title=payload.title,
+            description=payload.description,
+            created_by=current_user.id,
+            status="pending"  # Default status for new templates
+        )
+        db.add(tpl)
+        db.commit()
+        db.refresh(tpl)
 
-    # Add steps (items)
-    for step in payload.steps:
-        item = models.ChecklistItem(
-            template_id=tpl.id,
-            order=step.order,
-            label=step.label,
-            input_type=step.input_type,
-            required=bool(step.required),
-            frequency=step.frequency,
-            unit=step.unit,
-            options=step.options if step.options else None,
+        # Add steps (items)
+        for step in payload.steps:
+            item = models.ChecklistItem(
+                template_id=tpl.id,
+                order=step.order,
+                label=step.label,
+                input_type=step.input_type,
+                required=bool(step.required),
+                frequency=step.frequency,
+                unit=step.unit,
+                options=step.options if step.options else None,
+            )
+            db.add(item)
+        
+        db.commit()
+        db.refresh(tpl)
+        return tpl
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error creating template: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to create template. Please try again."
         )
         db.add(item)
 
@@ -85,7 +99,7 @@ def get_template_items(
 
 
 # -----------------------------
-# Get Template and its Items both
+# Get Template with Items
 # -----------------------------
 @router.get("/template_with_items/{template_id}")
 def get_template_with_items(
@@ -136,6 +150,11 @@ def update_template(template_id: int, data: schemas.TemplateUpdate, db: Session 
             item.frequency = item_data.frequency
             item.unit = item_data.unit
             del existing_items[item_data.id]  # Mark as processed
+        
+
+    # Delete items not included in update request
+    # for item in existing_items.values():
+    #     db.delete(item)
 
     db.commit()
     db.refresh(template)
@@ -174,11 +193,7 @@ def update_checklist_status(template_id: int, status: str = Body(..., embed=True
 @router.post("/template/{template_id}/items", response_model=schemas.ChecklistItemOut)
 def add_template_item(
     template_id: int,
-<<<<<<< Updated upstream
-    item_data: schemas.AddNewChecklistItem,
-=======
     item_data: schemas.AddChecklistItem,
->>>>>>> Stashed changes
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
